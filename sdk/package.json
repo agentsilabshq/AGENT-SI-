@@ -1,0 +1,17 @@
+{
+  "name": "@agentsilabs/sdk",
+  "version": "0.1.0",
+  "description": "Zero-dependency client for the AGENT SI token-risk API (agentsi.site): scan, report, detect, rank, badge and share-card URLs.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "src", "README.md"],
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test" },
+  "engines": { "node": ">=18" },
+  "keywords": ["agent-si", "agsi", "token scanner", "honeypot", "rug check", "robinhood chain", "solana", "ethereum", "base", "bnb", "si score"],
+  "repository": { "type": "git", "url": "https://github.com/agentsilabshq/AGENT-SI-.git", "directory": "sdk" },
+  "homepage": "https://agentsi.site/docs",
+  "devDependencies": { "typescript": "^5.6.0" }
+}

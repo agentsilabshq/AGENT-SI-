@@ -19,3 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+This licence covers the SDK, examples and documentation in this repository.
+It does not cover the AGENT SI service, its scoring engine, data, the AGENT SI
+name, the SI helmet or the $AGSI marks, which remain the property of SI Labs.

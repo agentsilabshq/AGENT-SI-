@@ -1,0 +1,111 @@
+openapi: 3.1.0
+info:
+  title: AGENT SI public API
+  version: "1.0"
+  description: |
+    Token risk scans across Robinhood Chain, Solana, Ethereum, Base, BNB Chain and every chain with a live market.
+    Free during the public beta, rate limited per IP. Calls from browsers on other websites are refused: call from a server, bot or terminal.
+    The SI Score (0–100) says what SI could verify, never where the price goes. Research, not advice.
+servers:
+  - url: https://agentsi.site
+paths:
+  /api/scan:
+    get:
+      summary: Scan a token (streams progress, then the report)
+      parameters:
+        - { name: address, in: query, required: true, schema: { type: string }, description: "0x… contract or Solana mint" }
+        - { name: chain, in: query, schema: { type: string }, description: "Chain id (robinhood, solana, ethereum, base, bnb, …). Detected when omitted." }
+        - { name: force, in: query, schema: { type: string, enum: ["1"] }, description: "Re-read the chain even when a fresh report is cached" }
+      responses:
+        "200":
+          description: application/x-ndjson — one JSON object per line
+          content:
+            application/x-ndjson:
+              schema: { $ref: "#/components/schemas/ScanEvent" }
+        "422": { description: "Chain could not be settled; add &chain=" }
+        "429": { description: "Rate limited (8 scans/min per IP); see Retry-After" }
+  /api/report/{address}:
+    get:
+      summary: Latest stored report (no scan)
+      parameters:
+        - { name: address, in: path, required: true, schema: { type: string } }
+        - { name: chain, in: query, schema: { type: string } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report: { $ref: "#/components/schemas/Report" }
+                  history: { type: array, items: { type: object } }
+                  scanCount: { type: integer }
+                  rank: { $ref: "#/components/schemas/ScoreRank" }
+        "404": { description: "Never scanned" }
+  /api/detect:
+    get:
+      summary: Which chain an address belongs to
+      parameters: [{ name: address, in: query, required: true, schema: { type: string } }]
+      responses: { "200": { description: "{ chain, reason, options? }" } }
+  /api/rank:
+    get:
+      summary: The SI Score board
+      parameters:
+        - { name: chain, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 200, default: 50 } }
+      responses: { "200": { description: "{ rows: RankRow[], total, chains, at }" } }
+  /api/health:
+    get: { summary: Engine status, responses: { "200": { description: ok } } }
+  /api/card/scan/{chain}/{address}:
+    get: { summary: 1200×630 PNG share card, responses: { "200": { description: image/png } } }
+  /api/card/badge/{chain}/{address}:
+    get:
+      summary: SVG badge with the current SI Score
+      parameters: [{ name: label, in: query, schema: { type: string, maxLength: 24 } }]
+      responses: { "200": { description: image/svg+xml, cached 5 minutes } }
+components:
+  schemas:
+    ScanEvent:
+      oneOf:
+        - type: object
+          properties: { type: { const: step }, id: { type: string }, status: { enum: [running, done, failed, skipped] }, detail: { type: string }, ms: { type: integer } }
+        - type: object
+          properties: { type: { const: report }, report: { $ref: "#/components/schemas/Report" }, cached: { type: boolean }, rank: { $ref: "#/components/schemas/ScoreRank" } }
+        - type: object
+          properties: { type: { const: error }, code: { enum: [invalid, failed] }, message: { type: string } }
+    Report:
+      type: object
+      description: Full shape documented at https://agentsi.site/docs; the fields below are stable.
+      properties:
+        id: { type: string }
+        address: { type: string }
+        chain: { type: string }
+        createdAt: { type: string, format: date-time }
+        token: { type: object, properties: { name: { type: [string, "null"] }, symbol: { type: [string, "null"] } } }
+        findings: { type: array, items: { $ref: "#/components/schemas/Finding" } }
+        posture: { enum: [critical, high, elevated, moderate, low] }
+        coverage: { type: object, properties: { checked: { type: integer }, total: { type: integer } } }
+        score: { $ref: "#/components/schemas/SiScore" }
+        verdict: { type: object, properties: { headline: { type: string }, text: { type: string } } }
+    Finding:
+      type: object
+      properties:
+        id: { type: string }
+        category: { type: string }
+        severity: { enum: [critical, high, medium, low, info, pass, unknown] }
+        title: { type: string }
+        evidence: { type: string }
+        source: { type: string }
+    SiScore:
+      type: object
+      properties:
+        points: { type: integer, minimum: 0, maximum: 100 }
+        tier: { enum: [fortified, solid, watchlist, fragile, hazard] }
+        label: { type: string }
+        confidence: { enum: [verified, partial, thin] }
+        checks: { type: object, properties: { checked: { type: integer }, total: { type: integer } } }
+        deductions: { type: array, items: { type: object, properties: { id: { type: string }, title: { type: string }, points: { type: integer } } } }
+        credits: { type: array, items: { type: object, properties: { id: { type: string }, title: { type: string }, points: { type: integer } } } }
+    ScoreRank:
+      type: object
+      properties: { position: { type: integer }, of: { type: integer }, chain: { type: string } }
